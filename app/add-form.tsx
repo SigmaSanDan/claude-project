@@ -20,6 +20,7 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
   const [developerId, setDeveloperId] = useState("");
   const [priority, setPriority] = useState("medium");
   const [iterationId, setIterationId] = useState("");
+  const [ticketStatus, setTicketStatus] = useState("start");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -51,7 +52,10 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
       developer_id: developerId,
     };
     if (type === "focal") body.priority = priority;
-    if (type === "ticket" && iterationId) body.iteration_id = iterationId;
+    if (type === "ticket") {
+      body.status = ticketStatus;
+      if (iterationId) body.iteration_id = iterationId;
+    }
 
     const res = await fetch(endpoint, {
       method: "POST",
@@ -65,6 +69,7 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
       setTitle("");
       setDeveloperId("");
       setPriority("medium");
+      setTicketStatus("start");
       setIterationId("");
       onAdded();
     } else {
@@ -149,6 +154,19 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="critical">Critical</option>
+            </select>
+          </div>
+        )}
+
+        {type === "ticket" && (
+          <div style={rowStyle}>
+            <label style={labelStyle}>Status</label>
+            <select value={ticketStatus} onChange={(e) => setTicketStatus(e.target.value)} style={inputStyle}>
+              <option value="start">Start</option>
+              <option value="losningsforslag">Lösningsförslag</option>
+              <option value="development">Development</option>
+              <option value="pull_request">Pull Request</option>
+              <option value="testning">Testning</option>
             </select>
           </div>
         )}

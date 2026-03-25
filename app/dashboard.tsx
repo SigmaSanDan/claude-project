@@ -12,6 +12,14 @@ type DevData = {
   total: number;
 };
 
+type TicketData = {
+  id: number;
+  ticket_number: string;
+  title: string;
+  developer: string | null;
+  status: string;
+};
+
 type Iteration = {
   id: number;
   name: string;
@@ -27,6 +35,14 @@ const devPhotos: Record<string, string> = {
   Ivo: "https://www.attire.se/wp-content/uploads/Ivo-Kalu-f.webp",
   Lasse: "https://www.attire.se/wp-content/uploads/Lasse-Magnusson-f.webp",
 };
+
+const PIPELINE_STAGES = [
+  { key: "start", label: "Start", color: "#95a5a6" },
+  { key: "losningsforslag", label: "Lösningsförslag", color: "#8e44ad" },
+  { key: "development", label: "Development", color: "#2980b9" },
+  { key: "pull_request", label: "Pull Request", color: "#e67e22" },
+  { key: "testning", label: "Testning", color: "#27ae60" },
+] as const;
 
 const chillQuotes = [
   "Sippar kaffe",
@@ -53,7 +69,6 @@ const stressQuotes = [
 ];
 
 function getQuote(total: number, name: string) {
-  // Use name as seed for consistent quote per person
   const seed = name.charCodeAt(0) + name.length;
   if (total === 0) return "Väntar på action";
   if (total <= 3) return chillQuotes[seed % chillQuotes.length];
@@ -81,6 +96,7 @@ function milestoneColor(days: number | null) {
 
 export default function Dashboard() {
   const [data, setData] = useState<DevData[]>([]);
+  const [tickets, setTickets] = useState<TicketData[]>([]);
   const [iterations, setIterations] = useState<Iteration[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +105,9 @@ export default function Dashboard() {
       fetch("/api/dashboard"),
       fetch("/api/iterations"),
     ]);
-    setData(await dashRes.json());
+    const dashJson = await dashRes.json();
+    setData(dashJson.developers);
+    setTickets(dashJson.tickets);
     setIterations(await iterRes.json());
     setLoading(false);
   }, []);
@@ -107,7 +125,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 20px" }}>
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 20px" }}>
       <h1 style={{ fontSize: 28, marginBottom: 8 }}>Team Dashboard</h1>
       <p style={{ color: "#666", marginBottom: 24 }}>
         Totalt: {totalFocals} focals, {totalTickets} tickets
@@ -120,14 +138,65 @@ export default function Dashboard() {
       {loading ? (
         <p>Laddar...</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16, marginBottom: 32 }}>
-          {data.map((dev) => (
-            <DevCard key={dev.name} dev={dev} />
-          ))}
-        </div>
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16, marginBottom: 32 }}>
+            {data.map((dev) => (
+              <DevCard key={dev.name} dev={dev} />
+            ))}
+          </div>
+
+          <TicketPipeline tickets={tickets} />
+        </>
       )}
 
       <AddForm onAdded={loadData} />
+    </div>
+  );
+}
+
+function TicketPipeline({ tickets }: { tickets: TicketData[] }) {
+  if (tickets.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <h2 style={{ fontSize: 20, marginBottom: 16 }}>Ticket Pipeline</h2>
+      <div style={{ display: "flex", gap: 12, overflowX: "auto" }}>
+        {PIPELINE_STAGES.map((stage) => {
+          const stageTickets = tickets.filter((t) => t.status === stage.key);
+          return (
+            <div key={stage.key} style={pipelineColumnStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: stage.color }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#333" }}>{stage.label}</div>
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  backgroundColor: stage.color,
+                  color: "white",
+                  borderRadius: 10,
+                  padding: "1px 7px",
+                  marginLeft: "auto",
+                }}>
+                  {stageTickets.length}
+                </div>
+              </div>
+              {stageTickets.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#bbb", textAlign: "center", padding: 16 }}>Inga tickets</div>
+              ) : (
+                stageTickets.map((t) => (
+                  <div key={t.id} style={ticketCardStyle}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{t.ticket_number}</div>
+                    {t.title && <div style={{ fontSize: 13, color: "#333", marginTop: 4 }}>{t.title}</div>}
+                    {t.developer && (
+                      <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>{t.developer}</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -320,6 +389,22 @@ function Milestone({ label, date }: { label: string; date: string | null }) {
     </div>
   );
 }
+
+const pipelineColumnStyle: React.CSSProperties = {
+  flex: "1 1 180px",
+  minWidth: 160,
+  backgroundColor: "#f8f9fa",
+  borderRadius: 8,
+  padding: 12,
+};
+
+const ticketCardStyle: React.CSSProperties = {
+  backgroundColor: "white",
+  borderRadius: 6,
+  padding: "10px 12px",
+  marginBottom: 8,
+  boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+};
 
 const priorityBadge = (bg: string): React.CSSProperties => ({
   display: "inline-block",
