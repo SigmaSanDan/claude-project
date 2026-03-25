@@ -114,14 +114,7 @@ export default function Dashboard() {
       </p>
 
       {activeIteration && (
-        <div style={iterationCardStyle}>
-          <h2 style={{ fontSize: 16, margin: "0 0 12px" }}>{activeIteration.name}</h2>
-          <div style={{ display: "flex", gap: 24 }}>
-            <Milestone label="Lösningsförslag" date={activeIteration.solution_proposal_date} />
-            <Milestone label="Utvecklingsstopp" date={activeIteration.dev_freeze_date} />
-            <Milestone label="Deploy" date={activeIteration.deploy_date} />
-          </div>
-        </div>
+        <IterationCard iteration={activeIteration} onUpdated={loadData} />
       )}
 
       {loading ? (
@@ -260,6 +253,59 @@ function WorkloadBar({ total }: { total: number }) {
   );
 }
 
+function IterationCard({ iteration, onUpdated }: { iteration: Iteration; onUpdated: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(iteration.name);
+
+  useEffect(() => {
+    setName(iteration.name);
+  }, [iteration.name]);
+
+  async function save() {
+    if (name === iteration.name) {
+      setEditing(false);
+      return;
+    }
+    await fetch("/api/iterations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: iteration.id, name }),
+    });
+    setEditing(false);
+    onUpdated();
+  }
+
+  return (
+    <div style={iterationCardStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        {editing ? (
+          <>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+              autoFocus
+              style={{ fontSize: 16, fontWeight: 700, border: "1px solid #ddd", borderRadius: 4, padding: "2px 8px" }}
+            />
+            <button onClick={save} style={editBtnStyle}>Spara</button>
+            <button onClick={() => { setName(iteration.name); setEditing(false); }} style={editBtnStyle}>Avbryt</button>
+          </>
+        ) : (
+          <>
+            <h2 style={{ fontSize: 16, margin: 0 }}>{iteration.name}</h2>
+            <button onClick={() => setEditing(true)} style={editBtnStyle}>Byt namn</button>
+          </>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 24 }}>
+        <Milestone label="Lösningsförslag" date={iteration.solution_proposal_date} />
+        <Milestone label="Utvecklingsstopp" date={iteration.dev_freeze_date} />
+        <Milestone label="Deploy" date={iteration.deploy_date} />
+      </div>
+    </div>
+  );
+}
+
 function Milestone({ label, date }: { label: string; date: string | null }) {
   const days = daysUntil(date);
   const color = milestoneColor(days);
@@ -285,6 +331,15 @@ const priorityBadge = (bg: string): React.CSSProperties => ({
   fontWeight: 700,
   letterSpacing: 0.3,
 });
+
+const editBtnStyle: React.CSSProperties = {
+  padding: "2px 10px",
+  fontSize: 12,
+  backgroundColor: "#eee",
+  border: "1px solid #ddd",
+  borderRadius: 4,
+  cursor: "pointer",
+};
 
 const iterationCardStyle: React.CSSProperties = {
   backgroundColor: "white",
