@@ -18,6 +18,7 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
   const [number, setNumber] = useState("");
   const [title, setTitle] = useState("");
   const [developerId, setDeveloperId] = useState("");
+  const [priority, setPriority] = useState("medium");
   const [iterationId, setIterationId] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -49,6 +50,7 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
       title,
       developer_id: developerId,
     };
+    if (type === "focal") body.priority = priority;
     if (type === "ticket" && iterationId) body.iteration_id = iterationId;
 
     const res = await fetch(endpoint, {
@@ -62,6 +64,7 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
       setNumber("");
       setTitle("");
       setDeveloperId("");
+      setPriority("medium");
       setIterationId("");
       onAdded();
     } else {
@@ -138,6 +141,17 @@ export default function AddForm({ onAdded }: { onAdded: () => void }) {
             ))}
           </select>
         </div>
+
+        {type === "focal" && (
+          <div style={rowStyle}>
+            <label style={labelStyle}>Prioritet</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        )}
 
         {type === "ticket" && (
           <div style={rowStyle}>

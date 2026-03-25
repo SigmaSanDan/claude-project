@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { focal_number, title, developer_id, status } = body;
+  const { focal_number, title, developer_id, status, priority } = body;
 
   if (!focal_number) {
     return NextResponse.json({ error: "focal_number krävs" }, { status: 400 });
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("focals")
-    .insert({ focal_number, title, developer_id: developer_id || null, status: status || "open" })
+    .insert({ focal_number, title, developer_id: developer_id || null, status: status || "open", priority: priority || "medium" })
     .select()
     .single();
 

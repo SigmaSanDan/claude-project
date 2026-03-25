@@ -6,6 +6,8 @@ import AddForm from "./add-form";
 type DevData = {
   name: string;
   focals: number;
+  focals_critical: number;
+  focals_high: number;
   tickets: number;
   total: number;
 };
@@ -190,7 +192,7 @@ function DevCard({ dev }: { dev: DevData }) {
         &quot;{getQuote(dev.total, dev.name)}&quot;
       </div>
 
-      <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 16, marginBottom: 8 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: "#e74c3c" }}>{dev.focals}</div>
           <div style={{ fontSize: 11, color: "#999" }}>Focals</div>
@@ -200,6 +202,17 @@ function DevCard({ dev }: { dev: DevData }) {
           <div style={{ fontSize: 11, color: "#999" }}>Tickets</div>
         </div>
       </div>
+
+      {(dev.focals_critical > 0 || dev.focals_high > 0) && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", justifyContent: "center" }}>
+          {dev.focals_critical > 0 && (
+            <span style={priorityBadge("#c62828")}>{dev.focals_critical} critical</span>
+          )}
+          {dev.focals_high > 0 && (
+            <span style={priorityBadge("#e65100")}>{dev.focals_high} high</span>
+          )}
+        </div>
+      )}
 
       <WorkloadBar total={dev.total} />
     </div>
@@ -261,6 +274,17 @@ function Milestone({ label, date }: { label: string; date: string | null }) {
     </div>
   );
 }
+
+const priorityBadge = (bg: string): React.CSSProperties => ({
+  display: "inline-block",
+  padding: "2px 8px",
+  borderRadius: 10,
+  backgroundColor: bg,
+  color: "white",
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 0.3,
+});
 
 const iterationCardStyle: React.CSSProperties = {
   backgroundColor: "white",
