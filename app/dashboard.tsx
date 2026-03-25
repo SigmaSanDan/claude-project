@@ -18,6 +18,47 @@ type Iteration = {
   deploy_date: string | null;
 };
 
+const devPhotos: Record<string, string> = {
+  Sebastian: "https://www.attire.se/wp-content/uploads/attire-sebastian-1.webp",
+  "Björn": "https://www.attire.se/wp-content/uploads/attire-bjorn-1.webp",
+  Rune: "https://www.attire.se/wp-content/uploads/Rune-Bivrin-f.webp",
+  Ivo: "https://www.attire.se/wp-content/uploads/Ivo-Kalu-f.webp",
+  Lasse: "https://www.attire.se/wp-content/uploads/Lasse-Magnusson-f.webp",
+};
+
+const chillQuotes = [
+  "Sippar kaffe",
+  "Lutar sig tillbaka",
+  "Livet e gull",
+  "Zen-läge",
+  "Netflix-redo",
+];
+
+const sweatyQuotes = [
+  "Svettas lite...",
+  "Kaffe IV-dropp behövs",
+  "Det är lugnt... typ",
+  "Fler bollar än en jonglör",
+  "Hjälp uppskattas",
+];
+
+const stressQuotes = [
+  "HJÄLP",
+  "Skicka Red Bull",
+  "Överlevnadsläge",
+  "Brinner överallt",
+  "Ring ambulansen",
+];
+
+function getQuote(total: number, name: string) {
+  // Use name as seed for consistent quote per person
+  const seed = name.charCodeAt(0) + name.length;
+  if (total === 0) return "Väntar på action";
+  if (total <= 3) return chillQuotes[seed % chillQuotes.length];
+  if (total <= 7) return sweatyQuotes[seed % sweatyQuotes.length];
+  return stressQuotes[seed % stressQuotes.length];
+}
+
 function formatDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("sv-SE");
@@ -25,8 +66,7 @@ function formatDate(d: string | null) {
 
 function daysUntil(d: string | null) {
   if (!d) return null;
-  const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
-  return diff;
+  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
 }
 
 function milestoneColor(days: number | null) {
@@ -59,14 +99,13 @@ export default function Dashboard() {
   const totalFocals = data.reduce((sum, d) => sum + d.focals, 0);
   const totalTickets = data.reduce((sum, d) => sum + d.tickets, 0);
 
-  // Find the next upcoming iteration (closest deploy_date in the future)
   const activeIteration = iterations.find((it) => {
     if (!it.deploy_date) return false;
     return new Date(it.deploy_date) >= new Date(new Date().toDateString());
   });
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 20px" }}>
       <h1 style={{ fontSize: 28, marginBottom: 8 }}>Team Dashboard</h1>
       <p style={{ color: "#666", marginBottom: 24 }}>
         Totalt: {totalFocals} focals, {totalTickets} tickets
@@ -86,53 +125,124 @@ export default function Dashboard() {
       {loading ? (
         <p>Laddar...</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            backgroundColor: "white",
-            borderRadius: 8,
-            overflow: "hidden",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            marginBottom: 32,
-          }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: "#1a1a2e", color: "white" }}>
-              <th style={thStyle}>Utvecklare</th>
-              <th style={{ ...thStyle, textAlign: "center" }}>Focals</th>
-              <th style={{ ...thStyle, textAlign: "center" }}>Tickets</th>
-              <th style={{ ...thStyle, textAlign: "center" }}>Totalt</th>
-              <th style={{ ...thStyle, textAlign: "center" }}>Belastning</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((dev) => (
-              <tr key={dev.name} style={{ borderBottom: "1px solid #eee" }}>
-                <td style={tdStyle}>{dev.name}</td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <Badge count={dev.focals} color="#e74c3c" />
-                </td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <Badge count={dev.tickets} color="#3498db" />
-                </td>
-                <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>
-                  {dev.total}
-                </td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <WorkloadIndicator total={dev.total} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16, marginBottom: 32 }}>
+          {data.map((dev) => (
+            <DevCard key={dev.name} dev={dev} />
+          ))}
+        </div>
       )}
 
-      <p style={{ marginBottom: 16, fontSize: 13, color: "#999" }}>
-        Visar aktiva ärenden (open / in_progress)
-      </p>
-
       <AddForm onAdded={loadData} />
+    </div>
+  );
+}
+
+function DevCard({ dev }: { dev: DevData }) {
+  const photo = devPhotos[dev.name];
+
+  let borderColor: string;
+  let bgColor: string;
+  if (dev.total === 0) {
+    borderColor = "#e0e0e0";
+    bgColor = "#fafafa";
+  } else if (dev.total <= 3) {
+    borderColor = "#27ae60";
+    bgColor = "#f0faf4";
+  } else if (dev.total <= 7) {
+    borderColor = "#e65100";
+    bgColor = "#fff8f0";
+  } else {
+    borderColor = "#c62828";
+    bgColor = "#fff5f5";
+  }
+
+  return (
+    <div
+      style={{
+        backgroundColor: bgColor,
+        borderRadius: 12,
+        padding: 20,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        borderLeft: `4px solid ${borderColor}`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo || `https://ui-avatars.com/api/?name=${dev.name}&background=1a1a2e&color=fff&size=160`}
+        alt={dev.name}
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: "50%",
+          objectFit: "cover",
+          objectPosition: "top",
+          marginBottom: 12,
+          border: `3px solid ${borderColor}`,
+        }}
+      />
+
+      <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{dev.name}</div>
+      <div style={{ fontSize: 13, color: "#888", marginBottom: 12, fontStyle: "italic" }}>
+        &quot;{getQuote(dev.total, dev.name)}&quot;
+      </div>
+
+      <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#e74c3c" }}>{dev.focals}</div>
+          <div style={{ fontSize: 11, color: "#999" }}>Focals</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#3498db" }}>{dev.tickets}</div>
+          <div style={{ fontSize: 11, color: "#999" }}>Tickets</div>
+        </div>
+      </div>
+
+      <WorkloadBar total={dev.total} />
+    </div>
+  );
+}
+
+function WorkloadBar({ total }: { total: number }) {
+  let label: string;
+  let color: string;
+  let barWidth: number;
+
+  if (total === 0) {
+    label = "Ledig";
+    color = "#bbb";
+    barWidth = 0;
+  } else if (total <= 3) {
+    label = "Chill";
+    color = "#27ae60";
+    barWidth = Math.round((total / 10) * 100);
+  } else if (total <= 7) {
+    label = "Svettigt";
+    color = "#e65100";
+    barWidth = Math.round((total / 10) * 100);
+  } else {
+    label = "STRESSIGT!";
+    color = "#c62828";
+    barWidth = 100;
+  }
+
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 4 }}>{label}</div>
+      <div style={{ height: 6, backgroundColor: "#e0e0e0", borderRadius: 3, overflow: "hidden" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${barWidth}%`,
+            backgroundColor: color,
+            borderRadius: 3,
+            transition: "width 0.3s",
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -152,87 +262,6 @@ function Milestone({ label, date }: { label: string; date: string | null }) {
   );
 }
 
-function WorkloadIndicator({ total }: { total: number }) {
-  let label: string;
-  let bg: string;
-  let color: string;
-  let barWidth: number;
-
-  if (total === 0) {
-    label = "Ledig";
-    bg = "#f0f0f0";
-    color = "#999";
-    barWidth = 0;
-  } else if (total <= 3) {
-    label = "Chill";
-    bg = "#e8f5e9";
-    color = "#2e7d32";
-    barWidth = Math.round((total / 10) * 100);
-  } else if (total <= 7) {
-    label = "Svettigt";
-    bg = "#fff3e0";
-    color = "#e65100";
-    barWidth = Math.round((total / 10) * 100);
-  } else {
-    label = "Stressigt!";
-    bg = "#ffebee";
-    color = "#c62828";
-    barWidth = 100;
-  }
-
-  return (
-    <div style={{ minWidth: 120 }}>
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color,
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          height: 8,
-          backgroundColor: "#eee",
-          borderRadius: 4,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${barWidth}%`,
-            backgroundColor: color,
-            borderRadius: 4,
-            transition: "width 0.3s",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function Badge({ count, color }: { count: number; color: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        minWidth: 28,
-        padding: "2px 8px",
-        borderRadius: 12,
-        backgroundColor: count > 0 ? color : "#e0e0e0",
-        color: count > 0 ? "white" : "#999",
-        fontSize: 14,
-        fontWeight: 600,
-      }}
-    >
-      {count}
-    </span>
-  );
-}
-
 const iterationCardStyle: React.CSSProperties = {
   backgroundColor: "white",
   borderRadius: 8,
@@ -240,15 +269,4 @@ const iterationCardStyle: React.CSSProperties = {
   marginBottom: 24,
   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   borderLeft: "4px solid #3498db",
-};
-
-const thStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  textAlign: "left",
-  fontSize: 14,
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  fontSize: 15,
 };
