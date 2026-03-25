@@ -3,12 +3,26 @@
 import { useState, useEffect, useCallback } from "react";
 import AddForm from "./add-form";
 
+type FocalItem = {
+  focal_number: string;
+  title: string;
+  priority: string;
+};
+
+type TicketItem = {
+  ticket_number: string;
+  title: string;
+  status: string;
+};
+
 type DevData = {
   name: string;
   focals: number;
   focals_critical: number;
   focals_high: number;
+  focal_items: FocalItem[];
   tickets: number;
+  ticket_items: TicketItem[];
   total: number;
 };
 
@@ -99,6 +113,7 @@ export default function Dashboard() {
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [iterations, setIterations] = useState<Iteration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDev, setSelectedDev] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [dashRes, iterRes] = await Promise.all([
@@ -141,9 +156,21 @@ export default function Dashboard() {
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16, marginBottom: 32 }}>
             {data.map((dev) => (
-              <DevCard key={dev.name} dev={dev} />
+              <DevCard
+                key={dev.name}
+                dev={dev}
+                selected={selectedDev === dev.name}
+                onClick={() => setSelectedDev(selectedDev === dev.name ? null : dev.name)}
+              />
             ))}
           </div>
+
+          {selectedDev && (
+            <DevDetailPanel
+              dev={data.find((d) => d.name === selectedDev)!}
+              onClose={() => setSelectedDev(null)}
+            />
+          )}
 
           <TicketPipeline tickets={tickets} />
         </>
@@ -201,7 +228,7 @@ function TicketPipeline({ tickets }: { tickets: TicketData[] }) {
   );
 }
 
-function DevCard({ dev }: { dev: DevData }) {
+function DevCard({ dev, selected, onClick }: { dev: DevData; selected: boolean; onClick: () => void }) {
   const photo = devPhotos[dev.name];
 
   let borderColor: string;
@@ -222,12 +249,15 @@ function DevCard({ dev }: { dev: DevData }) {
 
   return (
     <div
+      onClick={onClick}
       style={{
         backgroundColor: bgColor,
         borderRadius: 12,
         padding: 20,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: selected ? `0 0 0 3px ${borderColor}` : "0 1px 3px rgba(0,0,0,0.1)",
         borderLeft: `4px solid ${borderColor}`,
+        cursor: "pointer",
+        transition: "box-shadow 0.2s",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -277,6 +307,79 @@ function DevCard({ dev }: { dev: DevData }) {
       )}
 
       <WorkloadBar total={dev.total} />
+    </div>
+  );
+}
+
+const STAGE_LABELS: Record<string, { label: string; color: string }> = {
+  start: { label: "Start", color: "#95a5a6" },
+  losningsforslag: { label: "Lösningsförslag", color: "#8e44ad" },
+  development: { label: "Development", color: "#2980b9" },
+  pull_request: { label: "Pull Request", color: "#e67e22" },
+  testning: { label: "Testning", color: "#27ae60" },
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: "#c62828",
+  high: "#e65100",
+  medium: "#757575",
+};
+
+function DevDetailPanel({ dev, onClose }: { dev: DevData; onClose: () => void }) {
+  return (
+    <div style={detailPanelStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, margin: 0 }}>{dev.name} — Ärenden</h2>
+        <button onClick={onClose} style={{ ...editBtnStyle, fontSize: 14, padding: "4px 12px" }}>Stäng</button>
+      </div>
+
+      {dev.focal_items.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 14, color: "#e74c3c", marginBottom: 8 }}>Focals ({dev.focals})</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+            {dev.focal_items.map((f) => (
+              <div key={f.focal_number} style={detailItemStyle}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{f.focal_number}</span>
+                  <span style={{
+                    ...priorityBadge(PRIORITY_COLORS[f.priority] ?? "#757575"),
+                    fontSize: 10,
+                  }}>{f.priority}</span>
+                </div>
+                {f.title && <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>{f.title}</div>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {dev.ticket_items.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 14, color: "#3498db", marginBottom: 8 }}>Tickets ({dev.tickets})</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {dev.ticket_items.map((t) => {
+              const stage = STAGE_LABELS[t.status] ?? { label: t.status, color: "#999" };
+              return (
+                <div key={t.ticket_number} style={detailItemStyle}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{t.ticket_number}</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: stage.color,
+                    }}>{stage.label}</span>
+                  </div>
+                  {t.title && <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>{t.title}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {dev.total === 0 && (
+        <p style={{ color: "#999", fontStyle: "italic" }}>Inga aktiva ärenden</p>
+      )}
     </div>
   );
 }
@@ -389,6 +492,21 @@ function Milestone({ label, date }: { label: string; date: string | null }) {
     </div>
   );
 }
+
+const detailPanelStyle: React.CSSProperties = {
+  backgroundColor: "white",
+  borderRadius: 8,
+  padding: 24,
+  marginBottom: 32,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+  border: "1px solid #e0e0e0",
+};
+
+const detailItemStyle: React.CSSProperties = {
+  backgroundColor: "#f8f9fa",
+  borderRadius: 6,
+  padding: "10px 14px",
+};
 
 const pipelineColumnStyle: React.CSSProperties = {
   flex: "1 1 180px",
