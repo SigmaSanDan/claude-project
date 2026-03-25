@@ -103,6 +103,7 @@ export default function Dashboard() {
               <th style={{ ...thStyle, textAlign: "center" }}>Focals</th>
               <th style={{ ...thStyle, textAlign: "center" }}>Tickets</th>
               <th style={{ ...thStyle, textAlign: "center" }}>Totalt</th>
+              <th style={{ ...thStyle, textAlign: "center" }}>Belastning</th>
             </tr>
           </thead>
           <tbody>
@@ -117,6 +118,9 @@ export default function Dashboard() {
                 </td>
                 <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>
                   {dev.total}
+                </td>
+                <td style={{ ...tdStyle, textAlign: "center" }}>
+                  <WorkloadIndicator total={dev.total} />
                 </td>
               </tr>
             ))}
@@ -144,6 +148,68 @@ function Milestone({ label, date }: { label: string; date: string | null }) {
       <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 15, fontWeight: 600, color }}>{formatDate(date)}</div>
       <div style={{ fontSize: 12, color }}>{daysText}</div>
+    </div>
+  );
+}
+
+function WorkloadIndicator({ total }: { total: number }) {
+  let label: string;
+  let bg: string;
+  let color: string;
+  let barWidth: number;
+
+  if (total === 0) {
+    label = "Ledig";
+    bg = "#f0f0f0";
+    color = "#999";
+    barWidth = 0;
+  } else if (total <= 3) {
+    label = "Chill";
+    bg = "#e8f5e9";
+    color = "#2e7d32";
+    barWidth = Math.round((total / 10) * 100);
+  } else if (total <= 7) {
+    label = "Svettigt";
+    bg = "#fff3e0";
+    color = "#e65100";
+    barWidth = Math.round((total / 10) * 100);
+  } else {
+    label = "Stressigt!";
+    bg = "#ffebee";
+    color = "#c62828";
+    barWidth = 100;
+  }
+
+  return (
+    <div style={{ minWidth: 120 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          height: 8,
+          backgroundColor: "#eee",
+          borderRadius: 4,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${barWidth}%`,
+            backgroundColor: color,
+            borderRadius: 4,
+            transition: "width 0.3s",
+          }}
+        />
+      </div>
     </div>
   );
 }
