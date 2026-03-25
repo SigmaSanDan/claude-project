@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { ticket_number, title, developer_id, iteration, status } = body;
+  const { ticket_number, title, developer_id, iteration_id, status } = body;
 
   if (!ticket_number) {
     return NextResponse.json({ error: "ticket_number krävs" }, { status: 400 });
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("tickets")
-    .insert({ ticket_number, title, developer_id: developer_id || null, iteration, status: status || "open" })
+    .insert({ ticket_number, title, developer_id: developer_id || null, iteration_id: iteration_id || null, status: status || "open" })
     .select()
     .single();
 
